@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { resolve } from 'node:path';
-import { exportSongPdf, exportSetlistPdf } from '../pdf-export';
+import {
+  exportSongPdf,
+  exportSetlistPdf,
+  exportLibraryPdf,
+  librarySongPageNumbers,
+  orderExportableSongs,
+} from '../pdf-export';
+import type { ExportableSong } from '../api';
 import { PDFDocument } from 'pdf-lib';
 import type { Setlist, SetlistEntry } from '../../types/setlist';
 
@@ -175,6 +182,59 @@ describe('exportSetlistPdf', () => {
   it('gathers undrawable characters from every entry', async () => {
     const entries = [entry(1), entry(2, { content: '{key: G}\n[G]안녕\n' })];
     const missing = await exportSetlistPdf(setlist(entries), { nashville: false, fontSize: 0 });
+    expect(missing.length).toBeGreaterThan(0);
+  });
+});
+
+const librarySong = (id: number, title: string, content?: string): ExportableSong => ({
+  id,
+  title,
+  artist: 'Artist',
+  content: content ?? `{title: ${title}}\n{artist: Artist}\n{key: G}\n[G]lyrics\n`,
+  bpm: null,
+});
+
+describe('exportLibraryPdf', () => {
+  it('rejects a library with no exportable songs', async () => {
+    await expect(exportLibraryPdf([])).rejects.toThrow('No exportable songs in your library');
+  });
+
+  it('adds a contents page before alphabetically ordered songs', async () => {
+    const songs = [
+      librarySong(2, 'zebra'),
+      librarySong(1, 'Alpha'),
+    ];
+    expect(orderExportableSongs(songs).map((song) => song.title)).toEqual(['Alpha', 'zebra']);
+    await exportLibraryPdf(songs);
+    const bytes = await lastPdf();
+    expect(await pageCount(bytes)).toBe(3);
+    expect(librarySongPageNumbers([1, 1])).toEqual([2, 3]);
+  });
+
+  it('accounts for multiple contents pages in song page references', async () => {
+    const songs = Array.from({ length: 39 }, (_, i) => librarySong(i, `中文${String(i).padStart(2, '0')}`));
+    await exportLibraryPdf(songs);
+    const bytes = await lastPdf();
+    expect(await pageCount(bytes)).toBe(41);
+    expect(librarySongPageNumbers(Array(39).fill(1))).toEqual(
+      Array.from({ length: 39 }, (_, i) => i + 3),
+    );
+  });
+
+  it('keeps a multi-page song together and points the following song after it', async () => {
+    const longContent = `{title: 中文長歌}\n{key: G}\n${Array.from({ length: 180 }, (_, i) => `[G]line ${i}`).join('\n')}`;
+    await exportLibraryPdf([
+      librarySong(1, '中文長歌', longContent),
+      librarySong(2, '中文末歌'),
+    ]);
+    const bytes = await lastPdf();
+    const count = await pageCount(bytes);
+    expect(count).toBeGreaterThan(3);
+    expect(librarySongPageNumbers([count - 2, 1])).toEqual([2, count]);
+  });
+
+  it('reports unsupported characters from all songs', async () => {
+    const missing = await exportLibraryPdf([librarySong(1, 'Korean', '{title: Korean}\n[G]안녕')]);
     expect(missing.length).toBeGreaterThan(0);
   });
 });

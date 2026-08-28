@@ -62,3 +62,16 @@ export async function exportSongsBlob(token: string): Promise<{ blob: Blob; file
   const filename = filenameFromDisposition(res.headers.get('Content-Disposition'), 'chordvault-export.zip');
   return { blob, filename };
 }
+
+export interface ExportableSong {
+  id: number;
+  title: string;
+  artist: string;
+  content: string;
+  bpm: number | null;
+}
+
+export async function fetchExportableSongs(token: string): Promise<ExportableSong[]> {
+  const data = await api<{ songs: ExportableSong[] }>('GET', '/api/songs/export?format=json', undefined, token);
+  return data.songs;
+}

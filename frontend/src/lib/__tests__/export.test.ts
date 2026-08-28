@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { filenameFromDisposition, exportSongsBlob } from '../api';
+import { filenameFromDisposition, exportSongsBlob, fetchExportableSongs } from '../api';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -39,5 +39,20 @@ describe('exportSongsBlob', () => {
       json: async () => ({ error: 'Too many requests. Please try again later.' }),
     }));
     await expect(exportSongsBlob('tok')).rejects.toMatchObject({ status: 429 });
+  });
+});
+
+describe('fetchExportableSongs', () => {
+  it('requests the JSON export with authentication', async () => {
+    const songs = [{ id: 1, title: 'A', artist: '', content: '[G]a', bpm: null }];
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ songs }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchExportableSongs('tok123')).resolves.toEqual(songs);
+    expect(fetchMock).toHaveBeenCalledWith('/api/songs/export?format=json', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer tok123' },
+      body: undefined,
+    });
   });
 });
