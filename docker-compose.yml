@@ -1,20 +1,27 @@
 services:
   chordvault:
-    build: .
-    container_name: chordvault
-    ports:
-      - "3100:3100"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "3100"
     volumes:
-      - ./data:/app/data
-    env_file: .env
+      - chordvault_data:/app/data
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3100
+      NODE_ENV: production
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 256M
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  chordvault_data:
