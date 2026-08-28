@@ -28,7 +28,12 @@ describe('guitarChordDiagram', () => {
     const chord = guitarChordDiagram('C');
     expect(chord?.position).toBe(1);
     expect(chord?.fingers).toEqual([
-      [6, 'x'], [5, 3, '3'], [4, 2, '2'], [3, 0], [2, 1, '1'], [1, 0],
+      [6, 'x'],
+      [5, 3, '3'],
+      [4, 2, '2'],
+      [3, 0],
+      [2, 1, '1'],
+      [1, 0],
     ]);
   });
 
@@ -39,5 +44,21 @@ describe('guitarChordDiagram', () => {
 
   it('does not replace unsupported chords with an inaccurate shape', () => {
     expect(guitarChordDiagram('Cadd#11/nope')).toBeNull();
+  });
+
+  it.each([
+    ['C#', 4],
+    ['G#', 4],
+    ['Gm', 3],
+  ])('uses the familiar full-barre voicing for %s', (symbol, baseFret) => {
+    const chord = guitarChordDiagram(symbol);
+    expect(chord?.position).toBe(baseFret);
+    expect(chord?.barres).toContainEqual({
+      fromString: 6,
+      toString: 1,
+      fret: 1,
+      text: '1',
+    });
+    expect(chord?.fingers).not.toContainEqual(expect.arrayContaining([expect.anything(), 1]));
   });
 });
