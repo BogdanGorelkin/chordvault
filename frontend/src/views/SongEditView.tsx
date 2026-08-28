@@ -27,6 +27,7 @@ export function SongEditView({ songId, openImport = false, navigate }: SongEditV
   const [song, setSong] = useState<Song | null>(null);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [preferredLanguages, setPreferredLanguages] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [ocrOpen, setOcrOpen] = useState(openImport);
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const { theme } = useTheme();
@@ -65,6 +66,9 @@ export function SongEditView({ songId, openImport = false, navigate }: SongEditV
         .catch(() => {});
       apiCall<{ languages: string[] }>('GET', '/api/settings/languages')
         .then((d) => setPreferredLanguages(d.languages))
+        .catch(() => {});
+      apiCall<{ tags: string[] }>('GET', '/api/songs/tags')
+        .then((d) => setAvailableTags(d.tags))
         .catch(() => {});
     }
   }, [apiCall, user]);
@@ -190,7 +194,7 @@ export function SongEditView({ songId, openImport = false, navigate }: SongEditV
       </div>
       <div className="field">
         <label>Tags</label>
-        <TagPicker selected={state.tags} onChange={handleTagsChange} />
+        <TagPicker selected={state.tags} suggestions={availableTags} onChange={handleTagsChange} />
       </div>
       <div className="field">
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
