@@ -3,7 +3,7 @@ import { useApi } from '../hooks/useApi';
 import { LANGUAGES, languageName } from '../lib/languages';
 import { useDemo } from '../context/DemoContext';
 import { useAuth } from '../context/AuthContext';
-import { exportSongsBlob } from '../lib/api';
+import { exportSongsBlob, fetchExportableSongs } from '../lib/api';
 import { ImportModal } from '../components/ImportModal';
 import { GeminiKeySettings } from '../components/GeminiKeySettings';
 import { MAX_PREFERRED_LANGUAGES, MAX_OCR_PROMPT, DEFAULT_GEMINI_MODEL } from '../lib/constants';
@@ -26,7 +26,8 @@ export function SettingsView() {
   const [ocrModel, setOcrModel] = useState(DEFAULT_GEMINI_MODEL);
   const [modelList, setModelList] = useState<{ id: string; label: string; hint: string }[]>([]);
   const [modelMsg, setModelMsg] = useState<{ text: string; color: string } | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [exportingChordPro, setExportingChordPro] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [exportMsg, setExportMsg] = useState<{ text: string; color: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
 
@@ -120,9 +121,9 @@ export function SettingsView() {
     } catch (e) { setLangMsg({ text: (e as Error).message, color: 'var(--danger)' }); }
   };
 
-  const handleExport = async () => {
+  const handleChordProExport = async () => {
     if (!user?.token) return;
-    setExporting(true);
+    setExportingChordPro(true);
     setExportMsg(null);
     try {
       const { blob, filename } = await exportSongsBlob(user.token);
@@ -137,7 +138,25 @@ export function SettingsView() {
     } catch (e) {
       setExportMsg({ text: (e as Error).message, color: 'var(--danger)' });
     } finally {
-      setExporting(false);
+      setExportingChordPro(false);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    if (!user?.token) return;
+    setExportingPdf(true);
+    setExportMsg(null);
+    try {
+      const songs = await fetchExportableSongs(user.token);
+      const { exportLibraryPdf } = await import('../lib/pdf-export');
+      const missing = await exportLibraryPdf(songs);
+      setExportMsg(missing.length
+        ? { text: `PDF exported, but these characters may be missing: ${missing.slice(0, 8).join(' ')}`, color: 'var(--danger)' }
+        : { text: 'Printable PDF exported', color: 'var(--success)' });
+    } catch (e) {
+      setExportMsg({ text: (e as Error).message || 'PDF export failed', color: 'var(--danger)' });
+    } finally {
+      setExportingPdf(false);
     }
   };
 
@@ -204,7 +223,7 @@ export function SettingsView() {
         <div className="settings-section">
           <h3 className="admin-section-title">{isAdmin ? 'Import & Export' : 'Export Songs'}</h3>
           <p className="muted-hint">
-            Download all songs you can access as ChordPro (.cho) files in a zip.
+            ChordPro (.cho) files are editable plain text for backups, re-importing, or ChordPro-compatible apps. The printable PDF includes a contents page and every song starts on a new page.
             {isAdmin ? ' As an admin, you can also bulk import ChordPro files into the library.' : ''}
           </p>
           <div className="auth-card">
@@ -212,8 +231,11 @@ export function SettingsView() {
               {isAdmin && (
                 <button className="btn btn-sm" onClick={() => setShowImport(true)}>Import Songs</button>
               )}
-              <button className="btn btn-sm" onClick={handleExport} disabled={exporting}>
-                {exporting ? 'Exporting…' : 'Export Songs'}
+              <button className="btn btn-sm" onClick={handleChordProExport} disabled={exportingChordPro}>
+                {exportingChordPro ? 'Exporting…' : 'Export ChordPro ZIP'}
+              </button>
+              <button className="btn btn-sm" onClick={handlePdfExport} disabled={exportingPdf}>
+                {exportingPdf ? 'Creating PDF…' : 'Export Printable PDF'}
               </button>
             </div>
             {exportMsg && <div className="field-message" style={{ color: exportMsg.color }}>{exportMsg.text}</div>}

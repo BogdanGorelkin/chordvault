@@ -62,7 +62,7 @@
 - **Build setlists:** ordered song lists with per-song key transpositions and session-level display overrides.
 - **Local browser setlists:** no account needed, stored in your browser
 - **Swipe playback:** swipe, tap side buttons, or use keyboard to navigate between songs. Key transpositions can be saved online or locally.
-- **PDF export:** export a single song or an entire setlist as PDF. Auto-fits to one page per song using 2-column layout when needed. Theme-aware background.
+- **PDF export:** export a single song, a setlist, or your complete accessible library as a printable PDF. Library exports are alphabetized and include a page-numbered table of contents. Songs auto-fit to one page when possible.
 - **Settings panel:** global defaults (number notation, hide YouTube, multi-column, font size) with session-level per-song overrides
 - **Multi-column layout:** split long chord sheets into columns for landscape or wide screens
 - **Font size A-/A+ & Auto-Fit:** adjustable font scale with reset, or auto-fit to screen.
@@ -226,6 +226,8 @@ docs/           Contributor guide, screenshots
 <summary><strong>Supported Formats</strong></summary>
 
 Songs are stored internally as [ChordPro](https://www.chordpro.org/), but you can paste any of these formats and they'll be auto-detected and converted:
+
+Settings can export these editable sources as a ZIP of `.cho` files for backup, re-import, text editing, or use in ChordPro-compatible software. Choose **Export Printable PDF** instead when you need a print-ready copy of the complete library.
 
 **ChordPro:**
 ```

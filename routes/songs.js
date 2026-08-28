@@ -76,6 +76,9 @@ function createSongsRouter({ withSkipGlobal, exportLimiter }) {
 
   router.get('/songs/export', withSkipGlobal(exportLimiter), requireAuth, (req, res) => {
     const isAdmin = isAdminRole(req.user.role);
+    if (req.query.format === 'json') {
+      return res.json({ songs: [...Song.iterateExportable(req.user.id, isAdmin)] });
+    }
     const date = new Date().toISOString().slice(0, 10);
     const zip = new yazl.ZipFile();
     res.setHeader('Content-Type', 'application/zip');

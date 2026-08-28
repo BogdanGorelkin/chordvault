@@ -31,8 +31,18 @@ test('admin gets every active song including other users private', () => {
   assert.ok(!ids(bob, true).includes(aPending));
 });
 
-test('rows carry title and content for zipping', () => {
+test('rows carry the fields needed for ChordPro and PDF export', () => {
   const row = [...Song.iterateExportable(alice, false)].find((r) => r.id === aPublic);
   assert.equal(row.title, 'A Public');
+  assert.equal(row.artist, '');
+  assert.equal(row.bpm, null);
   assert.match(row.content, /A Public/);
+});
+
+test('rows are ordered case-insensitively by title, artist, then id', () => {
+  insertSong.run(alice, 'zebra', '{title: zebra}\n[G]z', 'private', 'active');
+  insertSong.run(alice, 'alpha', '{title: alpha}\n[G]a', 'private', 'active');
+  const rows = [...Song.iterateExportable(alice, false)];
+  const titles = rows.map((row) => row.title);
+  assert.deepEqual(titles, [...titles].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
 });
