@@ -1,8 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { stepKey, getTransposeDelta } from '../keys';
+import { stepKey, getTransposeDelta, ALL_KEYS, ALL_KEYS_MINOR } from '../keys';
 import { getSongKey, renderChordPro } from '../chords';
 
 describe('stepKey', () => {
+  it('matches the picker for every major/minor step', () => {
+    for (const keys of [ALL_KEYS, ALL_KEYS_MINOR]) {
+      keys.forEach((key, index) => {
+        for (const direction of [-1, 1] as const) {
+          const expected = keys[(index + direction + keys.length) % keys.length];
+          expect(stepKey(key, direction)).toBe(expected);
+        }
+      });
+    }
+  });
+
   it('steps up and down through the major keys', () => {
     expect(stepKey('C', 1)).toBe('C#');
     expect(stepKey('C', -1)).toBe('B');
