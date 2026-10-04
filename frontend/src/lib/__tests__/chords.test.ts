@@ -1,4 +1,4 @@
-import { extractDirective, updateDirective, toChordPro, ensureKeyDirective, detectFormat, getSongKey } from '../chords';
+import { extractDirective, updateDirective, toChordPro, ensureKeyDirective, detectFormat, getSongKey, songHasKey } from '../chords';
 
 // ─── extractDirective ───────────────────────────────────────────────
 
@@ -273,6 +273,37 @@ describe('renderChordPro number notation', () => {
 });
 
 describe('getSongKey', () => {
+  it.each([
+    ['Amaj7', 'A'],
+    ['Am7', 'Am'],
+    ['Cmaj7/G', 'C'],
+    ['Cm7/G', 'Cm'],
+    ['H', 'H'],
+    ['Hm', 'Hm'],
+  ])('infers the native letter root of %s', (chord, key) => {
+    const content = `[Chorus]\n[${chord}]lyrics`;
+    expect(getSongKey(content)).toBe(key);
+    expect(ensureKeyDirective(content)).toBe(`{key: ${key}}\n${content}`);
+  });
+
+  it.each(['1', 'Do', 'Rem'])('does not infer a letter key from %s', chord => {
+    const content = `[${chord}]lyrics`;
+    expect(getSongKey(content)).toBe('');
+    expect(ensureKeyDirective(content)).toBe(content);
+  });
+
+  it('skips solfege and infers the next eligible letter root', () => {
+    const content = '[Do]words [G]lyrics';
+    expect(getSongKey(content)).toBe('G');
+    expect(ensureKeyDirective(content)).toBe(`{key: G}\n${content}`);
+  });
+
+  it('keeps an explicit key ahead of inferred chord roots', () => {
+    const content = '{key: D}\n[Amaj7]lyrics';
+    expect(getSongKey(content)).toBe('D');
+    expect(ensureKeyDirective(content)).toBe(content);
+  });
+
   it('reads the key directive when present', () => {
     expect(getSongKey('{key: A}\n[A]Amazing')).toBe('A');
   });
@@ -312,6 +343,35 @@ describe('ensureKeyDirective', () => {
 
 
 import { prepareSong } from '../chords';
+
+describe('key metadata', () => {
+  it('distinguishes explicit key metadata from inferred roots', () => {
+    expect(songHasKey('{key: G}\n[G]a', 2)).toBe(true);
+    expect(songHasKey('[G]a', 0)).toBe(false);
+    expect(songHasKey('lyrics only', 0)).toBe(false);
+    expect(songHasKey('{key: Chorus}\n[C]a', 2)).toBe(false);
+    expect(getSongKey('{key: G}\n[G]a', 2)).toBe('A');
+  });
+
+  it('uses the first key value when keys are duplicated', () => {
+    const content = '{key: G}\n{key: A}\n[C]lyrics';
+    expect(songHasKey(content, 0)).toBe(true);
+    expect(getSongKey(content)).toBe('G');
+    expect(prepareSong(content, 0)?.key).toBe('G');
+  });
+
+  it.each([
+    '{key: }\n[C]lyrics',
+    '{key: }\n{key: G}\n[C]lyrics',
+  ])('treats an empty first key as absent: %s', content => {
+    expect(songHasKey(content, 0)).toBe(false);
+    expect(getSongKey(content)).toBe('C');
+    const prepared = prepareSong(content, 0, true);
+    expect(prepared).not.toBeNull();
+    expect(prepared!.key).toBe('');
+    expect(prepared!.getChords()).toEqual(['C']);
+  });
+});
 
 describe('prepareSong', () => {
   const chordsOf = (song: NonNullable<ReturnType<typeof prepareSong>>) => {

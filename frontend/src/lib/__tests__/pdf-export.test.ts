@@ -101,6 +101,16 @@ describe('exportSongPdf', () => {
     expect(text).toContain('4');
   });
 
+  it('keeps number notation after transposing', async () => {
+    await exportSongPdf(song('{key: G}\n[G]a [C]b\n'), { ...opts, transpose: 2, nashville: true });
+    expect(textOf(await lastPdf()).replace(/\s+/g, '')).toContain('1a4b');
+  });
+
+  it('simplifies enharmonic spellings after transposing', async () => {
+    await exportSongPdf(song('{key: C}\n[B]x [E]y\n'), { ...opts, transpose: 1 });
+    expect(textOf(await lastPdf()).replace(/\s+/g, '')).toContain('CxFy');
+  });
+
   it('reports characters no font can draw', async () => {
     const missing = await exportSongPdf(song('{key: G}\n[G]안녕하세요\n'), opts);
     expect(missing.length).toBeGreaterThan(0);
@@ -118,7 +128,7 @@ const entry = (n: number, over: Partial<SetlistEntry> = {}): SetlistEntry => ({
   artist: 'A',
   content: `{title: Song ${n}}\n{key: G}\n[G]la la la\n`,
   content_override: null,
-  transpose: 0,
+  target_key: null,
   nashville: 0,
   font: null,
   two_col: null,
@@ -161,8 +171,8 @@ describe('exportSetlistPdf', () => {
     ).rejects.toThrow('No exportable songs');
   });
 
-  it('applies per-entry transpose', async () => {
-    await exportSetlistPdf(setlist([entry(1, { transpose: 2 })]), { nashville: false, fontSize: 0 });
+  it('applies per-entry target key', async () => {
+    await exportSetlistPdf(setlist([entry(1, { target_key: 'A' })]), { nashville: false, fontSize: 0 });
     expect(textOf(await lastPdf())).toContain('A');
   });
 
