@@ -177,8 +177,8 @@ function firstChordRoot(song: ChordSheetJS.Song): string | null {
       for (const item of line.items) {
         const chords = (item as { chords?: string }).chords?.trim();
         if (!chords || SECTION_LABEL_RE.test(chords)) continue;
-        const m = chords.match(/^([A-G][b#]?m?)/);
-        if (m) return m[1];
+        const chord = ChordSheetJS.Chord.parse(chords);
+        if (chord?.root?.type === 'symbol') return chord.root.toString();
       }
     }
   }
@@ -316,8 +316,7 @@ export function prepareSong(content: string, semitones = 0, nashville = false): 
     // Fix accidentals after transposition to preserve sharp preference and prevent auto-correction
     const transposed = fixChordAccidentals(semitones !== 0 ? song.transpose(semitones) : song);
 
-    const keyRaw = transposed.key || (transposed.getMetadataValue ? transposed.getMetadataValue('key') : null);
-    const key = typeof keyRaw === 'string' ? keyRaw : keyRaw?.toString() || null;
+    const key = transposed.key;
 
     if (nashville && key && ChordSheetJS.Chord) {
       return convertToNashville(transposed, key);
@@ -368,8 +367,7 @@ export function getSongKey(content: string, semitones = 0): string {
     const parser = new ChordSheetJS.ChordProParser();
     const song = parser.parse(content);
     const transposed = semitones !== 0 ? song.transpose(semitones) : song;
-    const keyRaw = transposed.key || (transposed.getMetadataValue ? transposed.getMetadataValue('key') : null);
-    const key = typeof keyRaw === 'string' ? keyRaw : keyRaw?.toString() || null;
+    const key = transposed.key;
     if (key) return normalizeKey(key);
     // Fallback: derive key from first chord
     const root = firstChordRoot(transposed);
@@ -382,7 +380,7 @@ export function songHasKey(content: string, semitones: number): boolean {
   try {
     const song = new ChordSheetJS.ChordProParser().parse(content);
     const transposed = semitones ? song.transpose(semitones) : song;
-    return !!(transposed.key || (transposed.getMetadataValue ? transposed.getMetadataValue('key') : null));
+    return !!transposed.key;
   } catch { return false; }
 }
 
