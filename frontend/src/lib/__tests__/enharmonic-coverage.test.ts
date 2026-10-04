@@ -10,19 +10,17 @@ describe('enharmonic spelling coverage', () => {
   const AWKWARD = /^(Cb|Fb|E#|B#)/;
   const DOUBLE = /(##|bb)/;
 
-  it('never renders Cb, Fb, E#, B# or a double accidental in any key', () => {
+  it.each([...ALL_KEYS, ...ALL_KEYS_MINOR])('never renders Cb, Fb, E#, B# or a double accidental in %s', (key) => {
     const body = ROOTS.flatMap((r) => QUALITIES.map((q) => `[${r}${q}]x`)).join(' ')
       + ' ' + ROOTS.map((r) => `[C/${r}]y`).join(' ');
     const found = new Set<string>();
-    for (const key of [...ALL_KEYS, ...ALL_KEYS_MINOR]) {
-      const content = `{key: ${key}}\n${body}`;
-      for (let t = -11; t <= 11; t++) {
-        for (const m of renderChordPro(content, t).matchAll(/class="chord"[^>]*>([^<]*)</g)) {
-          const chord = m[1].trim();
-          if (!chord) continue;
-          for (const part of chord.split('/')) {
-            if (AWKWARD.test(part) || DOUBLE.test(part)) found.add(part);
-          }
+    const content = `{key: ${key}}\n${body}`;
+    for (let t = -11; t <= 11; t++) {
+      for (const m of renderChordPro(content, t).matchAll(/class="chord"[^>]*>([^<]*)</g)) {
+        const chord = m[1].trim();
+        if (!chord) continue;
+        for (const part of chord.split('/')) {
+          if (AWKWARD.test(part) || DOUBLE.test(part)) found.add(part);
         }
       }
     }
